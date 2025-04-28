@@ -1,0 +1,20 @@
+\section{Markov Decision Processes}\label{MDP}
+The Markov Decision Process (MDP) provides the standard mathematical framework for modelling the interaction 
+between an agent and its environment. It serves as a formal model for sequential decision-making under 
+uncertainty and is defined as a 5-tuple $(S, A, P_{sa}, \gamma, R)$, where:
+
+\begin{itemize}
+    \item $S$ is a set of states
+    \item $A$ is a set of actions
+    \item $P_{sa}$ are the state transition probabilities. It describes the probability of getting into a state $s_{t+1}$ when being in a state $s_t$ and performing action $a_t$, i.e. $P_{sa}(s_{t+1}|s_t,a_t)$
+    \item $\gamma \in [0,1)$ is the discount factor 
+    \item R is the reward function. It can depend on the actions and the states, but sometimes also only on the states
+\end{itemize}
+A defining feature of an MDP is the Markov property, which says that the outcome of an action depends only on 
+the current state and not on the prior history of states or actions. Mathematically, this is expressed as:
+\begin{equation*}
+    P_{sa}(s_{t+1}|s_t,a_t,\dots,s_0,a_0) = P_{sa}(s_{t+1}|s_t,a_t)
+\end{equation*}
+
+
+

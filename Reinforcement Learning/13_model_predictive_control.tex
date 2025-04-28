@@ -1,0 +1,98 @@
+\section{Model Predictive Control / Closed-Loop Planning in Continuous Domains – Optimal Control}
+Model Predictive Control (MPC) is an optimal control strategy designed for managing complex systems, particularly 
+those with constraints. At its core, MPC relies on predicting the system’s future behavior and using this prediction 
+to determine the optimal action at the current time step. As new data becomes available, the controller updates its 
+plan, making MPC well-suited for dynamic and uncertain environments. The process unfolds as follows:
+\begin{enumerate}
+    \item \textbf{Model of the System:} MPC begins with a mathematical model that describes how the system evolves in response to different 
+    inputs.
+    \item \textbf{Prediction Horizon:} At each time step, the controller uses the model to predict the system’s future behaviour over a fixed 
+    time window, known as the prediction horizon. It simulates how the system would respond to different control inputs over this period.
+    \item \textbf{Optimization Problem:} The controller then formulates and solves an optimization problem to find the optimal sequence of 
+    control actions over the prediction horizon. This sequence is chosen to minimize a predefined cost function.
+    \item \textbf{Apply Only the First Action:} Instead of applying the entire sequence, MPC executes only the first action from the 
+    optimized plan. After this step the system state is then updated, and the process repeats.
+\end{enumerate}
+By continuously updating its decisions in this way, MPC can react to unexpected changes and uncertainties in the environment. In the 
+following  we will explore how to solve such optimization problems (step 3) in different settings. We will focus on finite-horizon problems without 
+constraints. Before we begin, we’ll introduce some standard notation from optimal control theory and clarify how it relates to terms commonly 
+used in reinforcement learning (RL):
+\begin{itemize}
+    \item $x$ represents the state of the system ($s$).
+    \item $u$ represents the control input or action ($a$).
+    \item $c(x,u)$ is the cost function, which is the counterpart to the reward function in RL (note that RL typically maximizes reward, while control minimizes cost)
+    \item $f(x,u)$ defines the system dynamics, describing how the state evolves. This corresponds to the transition function or transition probabilities in RL.
+\end{itemize}
+
+\subsection{Linear Quadratic Regulator}
+We will start by looking at the Linear Quadratic Regulator (LQR). In LQR, "linear" refers to 
+the system dynamics being linear, and "quadratic" refers to the cost function being 
+quadratic. A typical LQR problem can be formulated as:
+\begin{gather*}
+    \min\limits_{u_1,\dots,u_T} c(x_1,u_1)+c(f(x_1,u_1),u_2)+\dots+c(f(f(\dots)\dots),u_T) \\
+    f(x_t,u_t) = F_t
+\begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}
+ + \mathbf{f} \qquad 
+ c(x_t,u_t) = \frac{1}{2} \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}^T C_t \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}+ \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}^T \mathbf{c}_t
+\end{gather*}
+To find the optimal sequence of actions, we minimize the cost function over time. The details of how to solve this can 
+be found in the recommended resources. However, LQR is limited to systems with deterministic and linear state transitions.
+
+\subsection{Linear–quadratic–Gaussian Control}
+When dealing with stochastic transitions, we extend the LQR framework to the Linear Quadratic Gaussian (LQG) model. The overall problem 
+formulation remains the same as in LQR, with the key difference being how we define the system dynamics. In LQG, transitions are modeled as 
+linear functions with additive Gaussian noise:
+$$p(x_{t+1}|x_t,u_t) = \mathcal{N}( F_t
+\begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}
+ + \mathbf{f}, \Sigma_t)$$
+In other words, we take the deterministic transition function from LQR and simply add Gaussian noise to account for uncertainty. The good 
+news is that the same algorithm used to solve the LQR problem can also be applied to the LQG setting. 
+
+\subsection{Approximating Non-Linear Systems (iLQR)}
+While LQR and LQG are effective for linear systems, real-world systems are often non-linear and require a different approach. To handle non-
+linear dynamics, we can approximate both the dynamics and the cost function locally using a Taylor expansion around the current trajectory 
+point $(\hat{x}_t,\hat{u}_t)$.
+ \begin{gather*}
+     f(x_t,u_t) \approx  f(\hat{x}_t,\hat{u}_t)+ \nabla_{x_t,u_t} f(\hat{x}_t,\hat{u}_t) \begin{bmatrix} 
+x_t- \hat{x}_t\\ u_t- \hat{u}_t 
+\end{bmatrix} \\
+c(x_t,u_t) = c(\hat{x}_t,\hat{u}_t) + \nabla_{x_t,u_t} c(\hat{x}_t,\hat{u}_t) \begin{bmatrix} 
+x_t- \hat{x}_t\\ u_t- \hat{u}_t 
+\end{bmatrix}+
+\frac{1}{2} \begin{bmatrix} 
+x_t- \hat{x}_t\\ u_t- \hat{u}_t 
+\end{bmatrix}^T 
+\nabla_{x_t,u_t}^2 c(\hat{x}_t,\hat{u}_t)
+\begin{bmatrix} 
+x_t- \hat{x}_t\\ u_t- \hat{u}_t 
+\end{bmatrix}
+ \end{gather*}
+ we then define 
+$$ \bar{f}(x_t,u_t) = \underbrace{F_t}_{ \nabla_{x_t,u_t} f(\hat{x}_t,\hat{u}_t)}
+\begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}
+ + \mathbf{f} \qquad 
+ \bar{c}(x_t,u_t) = \frac{1}{2} \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}^T \underbrace{C_t}_{\nabla_{x_t,u_t}^2 c(\hat{x}_t,\hat{u}_t)} \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}+ \begin{bmatrix} 
+x_t\\ u_t 
+\end{bmatrix}^T \underbrace{\mathbf{c}_t}_{\nabla_{x_t,u_t} c(\hat{x}_t,\hat{u}_t)}$$
+With these approximations, we effectively transform the non-linear control problem into a locally linear-quadratic one, which we can now 
+solve using the standard LQR algorithm.
+
+\subsection{Resources}
+A more detailed explanation of Model Predictive Control and the solution to the equations above can be found in 
+Sergey Levine’s CS 285: Lecture 10 \cite{CS285,CS285LevineYoutube}.

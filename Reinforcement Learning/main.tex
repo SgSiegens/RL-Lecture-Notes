@@ -1,0 +1,129 @@
+\documentclass{article}
+
+% Language setting
+\usepackage[english]{babel}
+
+% Page size and margins (use 'a4paper' for UK/EU standard)
+\usepackage[letterpaper, top=2cm, bottom=2cm, left=3cm, right=3cm, marginparwidth=1.75cm]{geometry}
+
+% Math packages
+\usepackage{amsmath, amssymb, amsfonts, amsthm}
+\usepackage{dsfont}
+
+% Graphics and visualizations
+\usepackage{graphicx}
+\usepackage{svg}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{
+  fit,
+  calc,
+  automata,
+  positioning,
+  matrix,
+  arrows.meta
+}
+\usepackage{wrapfig}
+
+% Plotting
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7, ytick style={draw=none}}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% Algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% Text highlighting and colors
+\usepackage{color,soul}
+\usepackage[dvipsnames]{xcolor}
+
+% Hyperlinks
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+% Captions and subfigures
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Columns
+\usepackage{multicol}
+
+% Custom commands
+\newcommand{\rulesep}{\unskip\ \vrule\ }
+\newcommand*{\tikzmk}[1]{\tikz[remember picture, overlay] \node (#1) {};\ignorespaces}
+\newcommand{\sq}[1]{\item \textcolor{RoyalPurple}{\textbf{#1}}}
+\input{math_commands}
+
+% Box highlighting commands
+\newcommand{\boxit}[1]{%
+  \tikz[remember picture, overlay]{%
+    \node[yshift=3pt, fill=#1, opacity=.25, fit={(A)($(B)+(.95\linewidth,.8\baselineskip)$)}] {};%
+  }\ignorespaces%
+}
+
+% Custom colors
+\colorlet{mypink}{red!40}
+\colorlet{myblue}{cyan!60}
+\colorlet{mygreen}{black!50!green}
+
+% Title and author
+\title{Reinforcement Learning Lecture Notes}
+\author{A Student}
+
+
+\begin{document}
+
+\maketitle
+These are unofficial lecture notes for the course Reinforcement Learning [M-INFO-105623] at the Karlsruhe Institute of Technology 
+(KIT). I began writing them to deepen my own understanding of the material — putting concepts into my own words helped 
+me learn better. The structure of the notes reflects my personal learning process and what made the most sense to me. :)
+At times, I used language models to improve phrasing, since English isn’t my first language. If anything sounds off or unclear, 
+feel free to let me know — or, if you have access to the source files, you're welcome to make edits yourself.\newline
+The content is based on a variety of sources, including lectures, blog posts, and research papers, which I’ve tried to reference 
+wherever possible. If you're interested in exploring more about reinforcement learning, here are some great additional resources and courses in addition to the course at KIT:
+\begin{itemize}
+\item Sergey Levine’s course: CS285: Deep Reinforcement Learning 2020 \cite{CS285LevineYoutube,hafner2019learninglatentdynamicsplanning}
+\item Katerina Fragkiadaki’s lectures: CMU 10403: Deep Reinforcement Learning and Control (Spring 2019) at Carnegie Mellon University, as well as her newer courses \cite{DeepRLandControl}
+\item Emma Brunskill’s course: CS234: Reinforcement Learning (Spring 2024) at Stanford University \cite{CS234Stanford}
+\item The lecture series from Google DeepMind in collaboration with UCL \cite{deepmind_ucl}
+\item The Deep RL Bootcamp lecture series from UC Berkeley \cite{DeepRlBootcamp}
+\end{itemize}
+Of course, you don't need to go through all of these courses — sometimes one instructor's explanation of a topic just clicks 
+better than another's. For a solid foundational textbook, I highly recommend Reinforcement Learning: An Introduction by Sutton 
+and Barto \cite{10.5555/3312046}.
+Please note that these notes are not a substitute for the actual course; they’re meant to be used as a supplement to it.
+\newpage
+\tableofcontents
+\newpage
+
+\input{0_Introduction}
+\input{1_markov}
+\include{2_terminology}
+\include{3_dynamic_programming}
+\include{4_k_armed_bandits}
+\include{5_td_mehods}
+\include{6_policy_gradients}
+\include{7_1_actor_critic}
+\include{7_2_off_policy_actor_critic}
+\include{8_controlAsInference}
+\include{9_trust_regions}
+\include{10_evolutional_strategies}
+\include{11_bayesian_optimization}
+\include{12_planning}
+\include{13_model_predictive_control}
+\include{14_model_based_rl}
+\include{15_imitation_learning}
+\include{16_offline_rl}
+\include{17_transformers}
+\include{18_diffusion}
+\include{19_distibutional_rl}
+%\include{20_motion_primitives}
+
+
+\bibliographystyle{alpha}
+\bibliography{sample}
+
+\end{document}

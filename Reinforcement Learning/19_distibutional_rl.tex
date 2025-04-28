@@ -1,0 +1,24 @@
+\section{Distributional Reinforcement Learning}
+Distributional Reinforcement Learning (DRL) is an extension of traditional reinforcement 
+learning (RL) that focuses on modeling the distribution of return values (rewards) rather 
+than just predicting the expected return.\newline
+In traditional RL, the goal is often to maximise the expected cumulative reward (value function) for a given state . $$V ^\pi(s) = \mathbb{E}_\pi\left[\sum_{k=0}^\infty\gamma^k r_{t+1+k}|s_t=s\right]$$
+However, in distributional reinforcement learning, instead of focusing on a single expected 
+value, we learn the full distribution of the returns. This means that, instead of predicting 
+just the expected return (like a scalar value), we model the entire range of possible future 
+rewards and their probabilities. \newline
+Imagine you're playing a video game where, at some points, you can make a risky move that 
+might either yield a high reward or result in a penalty. In traditional RL, you might expect 
+the average reward (e.g., 5 points), but in distributional RL, you can learn the probability 
+distribution of rewards—e.g., 70\% chance for +10 points, 20\% chance for +5 points, and 
+10\% chance for -5 points. This distributional approach helps the agent better weigh its 
+decisions.
+
+\subsection{Resources}
+The content presented here is intended as a brief overview and will be expanded and improved in the future. For a deeper 
+understanding, a highly recommended lecture is ''Deep RL Bootcamp Frontiers Lecture I: Recent Advances, Frontiers, and 
+Future of Deep RL`` \cite{DeepRlBootcamp}.
+
+
+
+

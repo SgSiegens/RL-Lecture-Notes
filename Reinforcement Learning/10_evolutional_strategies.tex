@@ -1,0 +1,156 @@
+\section{Evolution Strategies}\label{evo_strats}
+Traditional deep learning methods often rely on stochastic gradient descent (SGD) to optimize a given objective.
+However, this approach assumes that gradients of the objective function are available — an assumption that doesn’t
+always hold, especially when the function is non-differentiable or its analytic form is unknown.\newline 
+Evolution Strategies (ES) offer an alternative: they are gradient-free, black-box optimization algorithms that can optimize 
+objective functions without requiring explicit gradient information. This makes them particularly useful in settings where 
+gradients are difficult or impossible to compute. Below is the general form of ES for optimizing $p_\theta(x)$:
+\begin{enumerate}
+    \item Generate a population of samples $D = \{(x_,f(x_i))\}$ where $x_i \sim p_\theta(x)$
+    \item Evaluate the “fitness” of samples in $D$
+    \item Select the best subset of individuals and use them to update $\theta$, generally based on fitness or rank. Go
+    to 1
+\end{enumerate}
+In reinforcement learning (RL), episode-based algorithms often use black-box optimization techniques like ES to maximize the 
+expected return of an entire trajectory — rather than focusing on step-by-step actions. This approach is particularly 
+effective when dealing with sparse or non-Markovian reward structures, where traditional, step-based methods struggle.
+Such an episode-based Task is for instance the Hopper task, where the goal is to jump as high as possible. Rewarding based on 
+the current height (Markovian reward) would be less effective since height can fluctuate quickly. A better approach is to 
+reward the agent based on the highest point reached during the episode, providing clearer guidance towards the desired 
+behavior.\newline 
+So the overall objective is to find a distribution $\pi_\theta(x)$ over variables $x\in \mathbb{R}^n$ that maximizes the 
+expected value of the episodic return $R(\tau)$:
+$$\theta = \argmax\limits_\theta \mathbb{E}_{\tau \sim \pi_\theta }[R(\tau)]$$
+In this setting, Evolution Strategies (ES) can be used as a black-box optimizer to iteratively improve the policy parameters. 
+The process typically follows these steps:
+\begin{enumerate}
+    \item Explore: sample parameters $\theta_i \sim p_k(\theta)$
+    \item Evaluate: assess quality of parameters by generating trajectory $\tau_i \sim p_{\theta_i}(\tau) $ and define its quality through $g(\theta_i) = \mathbb{E}_{\tau \sim p_{\theta_i}(\tau)}[R(\tau)]$ 
+    \item Update: compute new search distribution $p_{k+1}$
+\end{enumerate}
+
+\subsection{Gaussian Evolution Strategies}
+In this section, we consider Evolution Strategies (ES) where the search distribution is modeled as a Gaussian. 
+The goal is to learn the parameters of this distribution to efficiently explore the space of solutions. The complexity 
+of the method depends on how expressive the Gaussian is:
+
+\paragraph{First-order: Diagonal Gaussian search distribution}
+Here, the Gaussian distribution is parameterized as follows:
+$$p_\omega(\theta) = \mathcal{N}(\mu,\sigma^2I), \text{ with } \omega = \{\mu,\sigma\}$$
+This variant is simple and highly scalable, making it suitable for high-dimensional problems. However, it uses an isotropic 
+variance (i.e., the same in all directions), which often leads to slower convergence due to limited directional guidance 
+during exploration.
+
+\paragraph{Second-order: Full-Covariance Gaussian search distribution}
+Here, the Gaussian distribution is parameterized as follows:
+$$p_\omega(\theta) = \mathcal{N}(\mu,\Sigma), \text{ with } \omega = \{\mu,\Sigma\}$$
+This allows for more flexible and efficient exploration by adapting the shape and orientation of the distribution 
+through the covariance matrix. While it typically converges faster than the diagonal version, its computational 
+cost scales poorly with dimensionality, making it less practical for very high-dimensional problems.
+
+\subsubsection{ Canonical Evolution Strategy (CES)}
+A basic first-order algorithm, using a diagonal Gaussian distribution, is the Canonical Evolutionary Strategy (CES). It 
+updates only the mean $\mu$, keeping $\sigma$ fixed.
+\begin{algorithm}[H]
+   \large
+    \caption{Canonical Evolutionary Strategy Algorithm}\label{ces}
+    \begin{algorithmic}
+    \STATE INPUT: $M \in \mathbb{N}$ number of elites 
+    \STATE init. $w_i = \frac{\log{(M+0.5)}-\log{(i)}}{\sum_{j=1}^M \log{(M+0.5)}-\log{(j)}}$
+    \REPEAT
+    \STATE Sample $N$ parameter vectors $\theta_i\sim \mathcal{N}(\mu_k,\sigma^2 I)$
+    \STATE Evaluate parameter vectors $g_i = g(\theta_i)$
+    \STATE Sort $(\theta_i,\dots,\theta_N)$ according to $g_i$ (best ones come first)
+    \STATE update $\mu$ ($\sigma$ is typically fixed): $$\mu_{k+1} = \mu_k + \sum_{i=1}^M w_i(\theta_i-\mu_k)= \sum_{i=1}^M w_i\theta_i$$
+    \UNTIL Result is good enough
+    \end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Cross-Entropy Method (CEM)}
+The Cross-Entropy Method (CEM) is one of the most popular second-order ES variants. It updates both the mean and the 
+covariance matrix of the search distribution using elite samples.
+\begin{algorithm}[H]
+   \large
+    \caption{Cross Entropy Method}\label{cem}
+    \begin{algorithmic}
+    \STATE INPUT: $M \in \mathbb{N}$ number of elites 
+    \REPEAT
+    \STATE Sample $N$ parameter vectors $\theta_i\sim \mathcal{N}(\mu_k,\Sigma_k)$
+    \STATE Evaluate parameter vectors $g_i = g(\theta_i)$
+    \STATE Sort $(\theta_i,\dots,\theta_N)$ according to $g_i$ (best ones come first)
+    \STATE update mean :
+    $$\mu_\text{elites} = \frac{1}{M}\sum_{i=1}^M\theta_i \qquad \mu_{k+1} = (1-\alpha)\mu_k+ \alpha\mu_\text{elites}  $$
+    \STATE update covariance: 
+    \begin{gather*}
+        \Sigma_\text{elites} \frac{1}{M}\sum_{i=1}^M (\theta_i -\mu_\text{elites})  (\theta_i -\mu_\text{elites})^T \\
+        \Sigma_{k+1} = (1-\alpha)\Sigma_k + \alpha \Sigma_\text{elites}
+    \end{gather*}
+    \UNTIL Result is good enough
+    \end{algorithmic}
+\end{algorithm}
+However both these methods have some key limitations:
+\begin{itemize}
+    \item Lack of a clear optimization objective: Since they rely on ranking the candidates rather than directly optimizing 
+    the expected reward, they do not explicitly maximize the expected return
+    \item Monotonic weighting transformation: The method's ranking approach is monotonic, which can result in convergence to a 
+    local optimum, especially in deterministic environments.
+    \item Challenges in stochastic settings: In environments with stochastic rewards, the behavior of ranking-based methods 
+    becomes less predictable and harder to analyze.
+\end{itemize}
+ 
+\subsection{Trust-Region Methods for Stochastic Search}\label{trust_regions_es}
+One issue with approaches that iteratively update the search distributions is that the updates can either be too moderate or 
+too greedy, often leading to suboptimal behavior. To address this, we can introduce the concept of trust regions, which we 
+encountered in a previous section and constrains the updates in a way that avoids drastic changes, promoting more stable 
+learning. In this case, the objective is defined as:
+$$\theta = \argmax\limits_\theta \mathbb{E}_{\tau \sim \pi_\theta }[R(\tau)] \text{ s.t. } KL(p||p_\text{old}) \leq 
+\epsilon$$
+This can then be solved using Lagrange multipliers, yielding a closed-form solution for the search distribution. For a more 
+detailed explanation and an alternative method involving trust regions, refer to \cite{JMLR:v25:22-0564}.
+
+\subsection{Self-Test Questions}
+\begin{enumerate}
+\sq{What the advantages/disadvantages of an episode-based RL formulation are} 
+\begin{itemize}
+    \item[] + Clear Objective Definition: the agent's goal is often clearly defined in terms of episodes
+    \item[] + Non-Markovian Rewards: can be more intuitive and better aligned with the overall task goals.
+    \item[] - Delayed Feedback: In some tasks, the consequences of an agent's actions may not be immediately apparent, leading to delayed rewards.
+\end{itemize}
+
+\sq{ How episode-based RL is connected to black-box optimization / evolutionary strategies (ES)}\newline
+
+\sq{ How we can use search distributions for black-box optimization} \newline
+A search distribution is a probabilistic model used to sample candidate solutions to the black-box objective 
+function. The idea is to treat the problem as one of searching for the optimal set of parameters (or 
+solutions) by sampling from a distribution, then refining the distribution based on feedback (evaluations of 
+the objective function aka black box).
+
+\sq{ What is the difference between first-order and second order methods for optimizing search distributions? Pros/Cons?}\newline The difference is w.r.t. the complexity of the gaussian search distribution.
+\begin{itemize}
+    \item first-order : $ \mathcal{N}(\mu,\sigma^2I)$ (better for high dimension, converges slowly)
+    \item second order : $ \mathcal{N}(\mu,\Sigma)$ (fast convergence, more directed exploration in parameter space, computable inefficient for high dimensions)
+\end{itemize}
+
+\sq{ How a simple policy gradient algorithm for the episode-based case looks like}\newline
+
+\sq{ What are the qualitative differences to “deterministic” gradient descent using finite differences}\newline
+
+\sq{ Why most ES use rankings instead of the fitness values}\newline
+Evolutionary Strategies (ES) often use rankings instead of raw fitness values to avoid issues like noise, 
+outliers, or scaling problems in the fitness function. Rankings are less sensitive to extreme fitness values, 
+ensuring that the selection process is more stable and robust.
+
+\sq{ How does the cross-entropy method work and what is it connection to evolutionary strategies}\newline
+See algorithm \ref{cem}. CEM can be viewed as a special case of evolutionary strategies, particularly in its 
+use of a population-based search and selection mechanism. Instead of using a simple mutation-based update as 
+in ES, CEM updates the search distribution based on the best-performing candidates. 
+
+\sq{ How to use trust-regions in for episode-based RL?}\newline
+See \ref{trust_regions_es}
+
+\sq{ Why can we use exact trust regions in this case (as opposed to Lecture 6)?}\newline
+Because for Gaussian distributions there is a closed form solution of the KL-Divergence which does not require sampling
+\end{enumerate}
+
+\subsection{Resources}
+A great resource on Evolution Strategies is the blog post by Weng (2019) \cite{weng2019ES}.

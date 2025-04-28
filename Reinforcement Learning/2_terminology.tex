@@ -1,0 +1,100 @@
+\section{Terminology}
+To understand the key concepts and algorithms of reinforcement learning,
+we need to introduce some terminology.
+
+\subsection{Policy}
+A policy $\pi$ determines what action an agent should take when it is in a 
+particular state. A deterministic policy is defined as $\pi(s) = a$. A stochastic 
+policy is defined as $\pi(a|s)$. It tells us what the probability 
+is of performing the action $a$ while in state $s$. The probability function here 
+is not the same as the state transition probabilities $P_{sa}$!
+
+\subsection{Episodes, Roll-out, Trajectories}
+All three represent a sequence of $(s, a, r)$ tuples, where an episode is 
+generally from an initial state to a terminal state, a roll-out is from an initial 
+or intermediate state to a terminal state, and a trajectory is between any two 
+states. But there is no clear distinction in the RL-World  
+
+%\subsection{Horizon}
+%The horizon is how far ahead the agent considers rewards.
+
+\subsection{Reward and Return}
+The goal of the agent is to maximise some notion of cumulative reward over episodes, given a sequence of 
+state action reward tuples $(s_t, a_t, r_t)$. The total \textbf{discounted return} from time step $t$, called $G_t$, is defined as 
+\begin{equation*}
+    G_t = r_{t+1}+ \gamma r_{t+2} + \gamma^{2} r_{t+3} + \dots = \sum_{k=0}^{\infty} \gamma^{k} r_{t+1+k}
+\end{equation*}
+The restriction of the discount factor $\gamma$ to the interval $[0, 1)$ is now more evident. Allowing $\gamma = 
+1$ in the context of an infinite episode would result in an infinite return $G_t$, which offers little insight 
+into the agent's behaviour. For finite episodes, setting $\gamma = 1$ is permissible; however, since we typically
+consider the infinite-horizon case, we constrain $\gamma$ to $[0, 1)$. The value of $\gamma$ also significantly 
+influences the agent's decision-making. When $\gamma$ approaches 0, the agent behaves ''myopic``, prioritizing 
+the maximization of immediate rewards. As $\gamma$ approaches 1, the agent becomes ''farsighted``, placing 
+greater emphasis on long-term future rewards.
+
+\subsection{Value Functions}
+In order to maximise the return, the agent needs to know which actions to take in each state. Therefore, it is 
+often useful to know ''how good'' a particular action performed in a particular state is. The two main functions 
+are:
+\subsubsection{Value Function}
+The state value function $V^{\pi}(s)$ of an MDP is the expected discounted return starting from state s and 
+following a policy $\pi$.
+\begin{align*}
+    V^{\pi}(s) = \mathbb{E}_{\pi}\left[G_t | s_t=s\right] &=  \mathbb{E}_{\pi}\left[\sum_{k=0}^{\infty} 
+    \gamma^{k} r_{t+1+k}|s_t=s\right]  \\
+     &= \mathbb{E}_{\pi}\left[r_{t+1}+\gamma (r_{t+2}+\gamma r_{t+3} \dots) | s_t=s\right]\\
+    &=  \mathbb{E}_{\pi}\left[r_{t+1}+\gamma G_{t+1} | s_t=s\right] \\
+    %&=   \mathbb{E}_{\pi}\left[r_{t+1}+\gamma V(s_{t+1}) | s_t=s\right] \\
+    &= \sum_a \pi(a|s)\left(R(s,a)+\gamma \sum_{s'} p(s'|s,a)\mathbb{E}_{\pi}\left[G_{t+1}|s_{t+1}= 
+    s'\right]\right) \\
+     &= \sum_a \pi(a|s)\left(R(s,a)+\gamma \sum_{s'} p(s'|s,a)V^{\pi}(s')\right) \numberthis \label{v bellmann}
+\end{align*}
+Equation \ref{v bellmann} is called the Bellman equation for $V^{\pi}$.
+
+\subsubsection{Action Value Function}
+The action-value function represents the expected return when starting in state $s$, taking action $a$, and 
+thereafter following policy $\pi$.
+\begin{align*}
+    Q^{\pi}(s,a) &=  \mathbb{E}_{\pi}\left[G_t | s_t=s,a_t=a\right]\\
+    &=  \mathbb{E}_{\pi}\left[r_{t+1}+ \gamma Q^{\pi}(s_{t+1},a_{t+1}) | s_t=s,a_t=a\right] \\
+    &=  R(s,a) + \gamma \sum_{s'}p(s'|s,a)\sum_{a'} \pi(a'|s') \mathbb{E}_{\pi}\left[G_{t+1}|s_{t+1} = s',a_{t+1} 
+    = a'\right] \\
+    &= R(s,a) + \gamma \sum_{s'}p(s'|s,a)\sum_{a'} \pi(a'|s') Q^{\pi}(s',a') \numberthis \label{q bellmann}
+\end{align*}
+Equation \ref{q bellmann} is known as the Bellman equation for $Q^{\pi}$. The value function $V$ and the action-
+value function $Q$ can also be defined in terms of each other since:
+\begin{gather}
+    V^{\pi}(s) = Q^{\pi}(s,\pi(s))=\mathbb{E}_{a\sim \pi}[Q^{\pi}(s,a)] \label{eq:v_to_q} \\
+    \rightarrow Q^{\pi}(s,a) = R(s,a) + \gamma \sum_{s'}p(s'|s,a)\underbrace{\sum_{a'} \pi(a'|s') Q^{\pi}
+    (s',a')}_{V^\pi(s')} \label{eq:q_to_v}%= R(s,a) + \gamma \sum_{s'}p(s'|s,a) V^{\pi}(s')
+\end{gather}
+
+\subsubsection{Advantage Function}\label{advantage_function}
+In RL, we often care about the relative advantage of an action over some other action rather than the absolute value. 
+The advantage function $A^\pi(s,a)$ quantifies how much better taking action $a$ in state $s$ is compared to randomly 
+selecting an action according to $\pi(\cdot|s)$ assuming the policy $\pi$ is followed thereafter. Mathematically, 
+the advantage function is defined by:
+$$A^\pi(s,a) = Q^\pi(s,a)- V^\pi(s)$$
+A thing to note is that $\mathbb{E}_{a\sim\pi}[A^\pi(s,a)]=0$ since 
+$$\mathbb{E}_{a\sim\pi}[A^\pi(s,a)] = \mathbb{E}_{a\sim\pi}[Q^\pi(s,a)- V^\pi(s)] = 
+\mathbb{E}_{a\sim\pi}[Q^\pi(s,a)]- \mathbb{E}_{a\sim\pi}[V^\pi(s)] \overset{\eqref{eq:v_to_q}}{=} V^\pi(s) - V^\pi(s) = 0 
+$$
+%\footnote{The reason why \( \mathbb{E}_{a \sim \pi}[V^\pi(s)] = V^\pi(s) \) is that \( \mathbb{E}[\mathbb{E}[X]] = \mathbb{E}[X] \), and since \( V^\pi(s) \) is itself an expectation, this holds (\href{https://math.stackexchange.com/questions/2034853/mathematical-expectation-eex-ex}{see}).}
+
+\subsection{Optimisation objective}
+As previously noted, the agent's objective is to find a policy that maximizes the return. To achieve this, the 
+agent seeks to optimize either the value function or the state-action value function, which then serves as a 
+foundation for deriving the policy. The optimal policy is defined as follows:
+\begin{gather*}
+V^*(s) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s\right] = \max_{a} \left( R(s,a) + \gamma \sum_{s'} 
+p(s'|s,a) V^{}(s') \right), \\
+Q^*(s,a) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s, a_t = a\right] = R(s,a) + \gamma \sum_{s'} p(s'|s,a) 
+\max_{a'} Q^{}(s',a').
+\end{gather*}
+Given the relationship between the value function and the state-action value function, it follows that $V^*(s) = 
+\max\limits_{a} Q^*(s,a)$. With $Q^*$ determined, the optimal policy can be straightforwardly expressed as $\pi^*
+(s) = \argmax\limits_{a} Q^*(s,a)$. In the subsequent sections, we will explore algorithms designed to compute 
+the optimal policy across various environmental settings.\footnote{ In the literature, the term ''Bellman 
+backup`` is sometimes used. It simply refers to the sum of the immediate reward and the value of the next state. 
+$Q^{\pi}(s,a) =  \mathbb{E}_{\pi}[\underbrace{r_{t+1}+ \gamma Q^{\pi}(s_{t+1},a_{t+1})}_{\text{Bellman backup}} | 
+s_t=s,a_t=a] $}

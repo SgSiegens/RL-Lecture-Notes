@@ -1,0 +1,26 @@
+\section{What is Reinforcement Learning}
+Reinforcement learning (RL), a core machine learning paradigm alongside supervised and unsupervised learning, 
+integrates machine learning and optimal control to enable an intelligent agent to maximize a reward signal in 
+an environment. It formalises the idea that rewarding or punishing an agent for its behaviour makes it more 
+likely to repeat or refrain from that behaviour in the future.
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[shorten >=1pt,node distance=2cm,on grid,auto] 
+   \node[rectangle,draw=black,rounded corners] (q_0)   {Agent}; 
+   \node[rectangle,draw=black,rounded corners] (q_1) [right=4cm of q_0] {Environment}; 
+    \path[->] 
+    (q_0) edge[bend left, above]  node {Action $a_t$} (q_1)
+    (q_1) edge[bend left, below]  node  {State $s_t$, Reward $r_t$} (q_0);
+\end{tikzpicture}
+\caption{Agent-Enviroment interaction loop}
+\label{fig:rl loop}
+\end{figure}
+
+The main characters are the agent and the environment. At every step, the agent receives a reward and either the 
+full state or just an observation of the environment. A state is a complete description of the world, like the 
+configuration of a chess game. An observation, though, is a partial description. Imagine an agent in a video 
+game: if you don’t have access to the underlying game mechanics, you can only infer information about the world 
+through the current frame. The reward indicates how good or bad the agent’s last action was, providing feedback 
+about what happened and how the environment might have changed (sometimes the environment changes on its own). 
+Based on this, the agent selects its next action, aiming to accumulate as much reward as possible over time, 
+known as the return.

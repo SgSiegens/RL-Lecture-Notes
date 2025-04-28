@@ -1,0 +1,257 @@
+\section{Policy Gradients} \label{PG}
+In this section we change the approach to finding the optimal policy. The previous 
+approaches were designed to approximate the value or action value function, which 
+was then used to generate a policy. But there are some difficulties with this 
+approach. In order to derive a policy from the value 
+function, we would need the dynamics model. By learning the q-value we are able to 
+derive a policy, but this also becomes more challenging to solve efficiently for 
+high dimensional/continuous action spaces. With policy gradients we parametrise the 
+policy $\pi_{\theta}$ directly, where the goal is to find the optimal parameter 
+$\theta$ in order to maximise the value function.\newline 
+%The policies will be stochastic rather than deterministic, and we will also be 
+%focusing on the finite horizon setting, so we do not need a discount factor here. 
+The goal is to maximise the value function by choosing the right parameter $\theta$ for our policy. 
+
+\begin{align*}
+V(s_0;\theta) &= \mathbb{E}_{\pi_{\theta}}\left[\sum_{k=0}^T R(s_k,a_k)| s_0\right]
+\end{align*}
+We can now rewrite this in terms of trajectories $\tau = (s_0,a_0,\dots,s_T)$
+\begin{equation}
+    V(s_0;\theta) = \int_{\tau} P(\tau;\theta)\underbrace{R(\tau)}_{G} \label{eq:vanilla_pg}
+\end{equation} 
+To find the optimal policy, we need to compute the gradient with respect to $\theta$. The challenge is that
+the resulting gradient of \eqref{eq:vanilla_pg} does not resemble an expectation that we can easily Monte Carlo sample. There are two methods
+that can be applied here to enable Monte Carlo integration: the likelihood-ratio gradient and the reparameterization
+trick. For now we will use the likelihood-ratio gradient, and later discuss scenarios where the reparameterization
+trick would be more appropriate (more on this can be found in \cite{likelihood_ratio_gradient}). 
+Taking the gradient with respect to $\theta$:
+\begin{align*}
+    \nabla_{\theta} V(s_0;\theta) &=  \nabla_{\theta} \int_{\tau} P(\tau;\theta)R(\tau) \\
+    &= \int_{\tau} R(\tau)\nabla_{\theta} P(\tau;\theta) \\
+    &= \int_{\tau} R(\tau) \frac{ P(\tau;\theta) }{ P(\tau;\theta) } \nabla_{\theta} P(\tau;\theta) \quad 
+    \left(\text{log trick: }\nabla_{\theta} \;\log{P(\tau;\theta)} = \frac{\nabla_{\theta} P(\tau;\theta)}
+    {P(\tau;\theta)}\right)\\
+     &= \int_{\tau} R(\tau) \;P(\tau;\theta)\; \nabla_{\theta} \log{P(\tau;\theta)}
+\end{align*}
+The probability of a trajectory is defined as $P(\tau;\theta)=p_0(s_0) 
+\prod_{t=0}^{T-1} p(s_{t+1}|s_t,a_t)\;\pi_{\theta}(a_t|s_t)$, which gives us the 
+following equation 
+\begin{align*}
+       \nabla_{\theta} V(s_0;\theta) =&\int_{\tau} R(\tau) \;P(\tau;\theta)\; \nabla_{\theta} 
+       \log{\left(p_0(s_0) \prod_{t=0}^{T-1} p(s_{t+1}|s_t,a_t)\;\pi_{\theta}(a_t|s_t)\right)} \\
+     =& \int_{\tau} R(\tau) \;P(\tau;\theta)\; \left(\nabla_{\theta} \log{p_0(s_0)}+ \sum_{t=0}^{T-1} \nabla_{\theta} 
+     \log{p(s_{t+1}|s_t,a_t)}+\nabla_{\theta}\log{\pi_{\theta}(a_t|s_t)} \right) \\
+     &= \int_{\tau} R(\tau) \;P(\tau;\theta)\; \sum_{t=0}^{T-1} \nabla_{\theta}\log{\pi_{\theta}(a_t|s_t)} \\
+     &=\mathbb{E}_{\tau \sim \pi_{\theta}}\left[ R(\tau) \; \sum_{t=0}^{T-1} \nabla_{\theta}
+     \log{\pi_{\theta}(a_t|s_t)} \right] \numberthis \label{polgrad}
+\end{align*}
+This is an expectation, which means that we can estimate it with a sample mean. If we collect a set
+of trajectories $\mathcal{D} = \{\tau_i\}_{i=1,...,N}$ where each trajectory is obtained by letting
+the agent act in the environment using the policy $\pi_{\theta}$, the policy gradient can be estimated with
+\begin{align} 
+    \frac{1}{|\mathcal{D}|} \sum_{\tau \in \mathcal{D}} \sum_{t=0}^{T} \nabla_{\theta} 
+    \log \pi_{\theta}(a_t |s_t) R(\tau) \label{pg_estimate}
+\end{align}
+This has the nice property that we do not need a dynmacis model. 
+%can be used in non-Markov (but the last point is not seen in the equations). 
+A side node, the term $\nabla_{\theta}\log{\pi_{\theta}(a_t|s_t)}$ is called 
+the score function and $\frac{\nabla_{\theta} P(\tau;\theta)}{P(\tau;\theta)}$ 
+is called the likelihood ratio.\newline Depending on whether the action space is discrete or continuous,
+different policy gradient strategies are employed, each with a corresponding form of the score function.
+\begin{itemize}
+    \item Softmax policy (for discrete): 
+    $$\pi_{\theta}(a|s)= \frac{e^{\psi(s,a)^T \theta}}{\sum_{a} e^{\psi(s,a)^T \theta}} \rightarrow 
+    \nabla_{\theta}\log{\pi_{\theta}(a_t|s_t)} = \psi(s,a)- \psi(s,a) \pi_{\theta}$$
+    \item Gaussian (for continuos): 
+    $$\pi_{\theta}(a|s)= N(a|f_{\theta}(s),\sigma^2) \rightarrow
+    \nabla_{\theta}\log{\pi_{\theta}(a_t|s_t)} = \frac{(a-f_{\theta}(s))\nabla_{\theta}f(s)}{\sigma^2}$$
+\end{itemize}
+As formulated thus far this methods is unbiased but very noisy (high variance) since we are 
+estimating the expectation via our policy (see \ref{pg_estimate}). The second issue is that since 
+the expectation is defined over our parametrised policy, meaning the policy gradient is an 
+on-policy method, we cannot reuse previously sampled data. This makes the approach sample 
+inefficient, as the policy is updated at each step. However, there are potential solutions 
+that we are going to look at in the following.
+
+\subsection{Use Temporal Structure}
+If we examine the equation \ref{polgrad}, we see that taking a step with this 
+gradient pushes up the log-probabilities of each action in proportion to $R(\tau)$, 
+the sum of all rewards ever received. But this makes not so much sense, because the 
+agent only should reinforces actions based on their consequences. Rewards received 
+before an action should not determine how good that action was, only rewards 
+received after. We can fix this by deriving the gradient estimator for a single reward. 
+\begin{align*}
+    \nabla_{\theta}\mathbb{E}_{\pi_\theta}[r_t] = \mathbb{E}_{\pi_\theta}
+    \left[r_t \sum_{k=0}^t \nabla_{\theta}\log{\pi_{\theta}(a_k|s_k)}\right]
+\end{align*}
+Summing this formula gives 
+\begin{align}
+     \nabla_{\theta} V(s_0;\theta) = \nabla_{\theta}\mathbb{E}_{\pi_\theta}[R] &=  
+     \mathbb{E}_{\pi_\theta}\left[\sum_{t=0}^{T}r_t \sum_{k=0}^t \nabla_{\theta}
+     \log{\pi_{\theta} (a_k|s_k)}\right] \nonumber \\
+     &= \mathbb{E}_{\pi_\theta}\left[\sum_{k=0}^{T} \nabla_{\theta}
+     \log{\pi_{\theta} (a_k|s_k) \sum_{t=k}^{T}r_t}\right] \label{polygrad_td}
+\end{align}
+This rearrangement shows that the log-probability of each action is scaled by the return following that action, rather than
+the total return. This aligns better with the principle that actions should be credited according to their future outcomes.
+\subsection{REINFORCE}
+A common algorithm that uses policy gradients is REINFORCE. (Note: Depending on the lecture, 
+REINFORCE may sometimes be introduced without considering temporal structure, as seen in KIT. 
+Please refer to your course materials for clarification. This definition aligns with that in 
+Sutton and Barto \cite{10.5555/3312046}.)
+\begin{algorithm}[H]
+  \large
+    \caption{REINFORCE : Monte-Carlo Policy-gradient Control (episodic)}\label{REINFORCE}
+    \begin{algorithmic}
+        \STATE Input $\pi_{\theta}, \alpha$
+        \STATE Loop for each episode $\sim \pi_{\theta}$:
+        \STATE \quad Loop for each step of the episode $t = 0,1,\dots,T-1$
+        \STATE \qquad $G \gets \sum_{k = t+1}^T \gamma^{k-t-1} r_k$
+        \STATE \qquad $\theta \gets \theta + \alpha \gamma^t G \nabla_{\theta} \log{\pi_{\theta}(a_t|s_t)}$
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{Baseline}
+This is a further improvement on the vanilla policy gradient. Before discussing the improvement,
+we will introduce a lemma. 
+\begin{lemma}[Grad-Log-Prob] \label{lemma:grad_log_prob}
+    \begin{align}
+    \mathbb{E}_{x\sim P_{\theta}}\left[\nabla_{\theta} \log{P_{\theta}(x)}\right] =0
+\end{align}
+\end{lemma}
+The proof goes as follows 
+\begin{align*}
+    \overbrace{\int_x P_{\theta}(x) = 1}^{\text{property of a PDF}} \rightarrow  
+    0&=\nabla_{\theta}\int_x P_{\theta}(x) \\
+    &= \int_x \nabla_{\theta} P_{\theta}(x) \\
+    &=  \int_x P_{\theta}(x) \nabla_{\theta} \log{P_{\theta}(x)} \\
+    &=  \mathbb{E}_{x\sim P_{\theta}}\left[\nabla_{\theta} \log{P_{\theta}(x)}\right]
+\end{align*}
+A consequence of this is that we can subtract any function $b$ which does not depend on the actions 
+$a$ while not adding any bias but are able to reduce the variance (last part is not shown here).
+
+\begin{align*}
+    \underset{a\sim\pi_\theta}{\mathbb{E}}\left[\sum_{k=0}^{T} \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) 
+    \left(\sum_{t=k}^{T}r_t - b(s_k)\right)}\right] &=
+     - \underset{a\sim\pi_\theta}{\mathbb{E}}\left[\sum_{k=0}^{T} \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) b(s_k)}\right] 
+     + \underbrace{\underset{a\sim\pi_\theta}{\mathbb{E}}\left[\sum_{k=0}^{T} \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) 
+    \sum_{t=k}^{T}r_t}\right]}_x\\
+    &= -  \sum_{k=0}^{T}\underset{a\sim\pi_\theta}{\mathbb{E}}\left[\nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) 
+    b(s_k)}\right] + x\\
+    &= -  \sum_{k=0}^{T}b(s_k)\underbrace{\underset{a\sim\pi_\theta}{\mathbb{E}}\left[\nabla_{\theta}\log{\pi_{\theta} (a_k|s_k)}\right]}_{0} +x  \qquad\text{(Lemma \ref{lemma:grad_log_prob})}\\
+    &= x \\
+    &= \nabla_{\theta} V(s_0;\theta)
+\end{align*}
+The most common choice for the baseline is to use the value function $V_\omega^{\pi}(s)$, 
+important here is that the value function does not depend on $\pi_{\theta}$. 
+
+\subsection{Data Reuse} \label{data_reuse}
+As mentioned earlier, one limitation of the policy gradient approach is that it is inherently on-policy—
+the expectation is defined with respect to the current policy. This means that once the policy is updated,
+previously collected trajectories become outdated (off-policy) and can no longer be used for further training.
+As a result, new trajectories must be generated after every gradient step, which can be highly inefficient.\newline
+A common way to address this issue is through importance sampling. This technique allows us to reuse trajectories collected 
+under an earlier policy by reweighting them appropriately. Suppose we want to evaluate the following expectation:
+$$ \mu = \mathbb{E}_{p(x)}[f(x)] = \int p(x)f(x) \text{ d}x $$
+one can then rewrite $\mu$ in terms of another PDF $q(x)$ as follows 
+$$\mu = \int p(x)f(x) \text{ d}x = \int q(x)\frac{p(x)}{q(x)}f(x) \text{ d}x = 
+\mathbb{E}_{q(x)}\left[\frac{p(x)}{q(x)}f(x)\right]$$ But this can suffer from high
+variance if p and q are quite different. In expectation it is exact, but we 
+would need to take a lot of samples to reduce the variance. Nevertheless, we can use 
+this to compute our gradient while still using older trajectories:
+\begin{align*}
+\nabla_\theta V(s_0;\theta) &= \nabla_\theta \mathbb{E}_{\pi_{\text{old}}}\left[\sum_{k=0}^{T} \frac{\pi_{\theta}(a_k|s_k)}{\pi_{\text{old}}(a_k|s_k)} \left(\sum_{t=k}^{T}r_t - b(s_t)\right)\right]  \\
+ &=  \mathbb{E}_{\pi_{\text{old}}}\left[\sum_{k=0}^{T}\nabla_\theta \frac{\pi_{\theta}(a_k|s_k)}{\pi_{\text{old}}(a_k|s_k)} \left(\sum_{t=k}^{T}r_t - b(s_t)\right)\right]  \\
+ &\vdots \qquad\text{(log trick )}\\
+&=\mathbb{E}_{\pi_{\text{old}}}\left[\sum_{k=0}^{T} \frac{\pi_{\theta}(a_k|s_k)}{\pi_{\text{old}}(a_k|s_k)} 
+ \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) \left(\sum_{t=k}^{T}r_t - b(s_t)\right)}\right] 
+\end{align*}
+One remark is that, while we needed to use the likelihood ratio gradient for equation \eqref{eq:vanilla_pg}, since it would 
+not have represented an expectation that we could sample using Monte Carlo. In the case of this expectation, this is actually 
+not necessary. Even when we take the gradient of the expectation (first equation) with respect to $\theta$, it remains an 
+expectation (because the expectation is defined over $\pi_{\text{old}}$). As a result, many libraries do not implement it 
+using the likelihood ratio form (last equation).
+
+\subsection{Policy Gradients with Q-Values}
+So far, we have used a single-sample estimate for calculating the return, 
+as shown in equation \eqref{polygrad_td}. While the gradient estimator is unbiased, it suffers 
+from high variance since we rely on a single trajectory to estimate the return for a given
+state-action pair. A better approach would be to use the expected sum of returns for the 
+state-action pair, which is precisely the definition of the Q-value function. Therefore, we
+can also express the policy gradient via the Q-value which results in a lower-variance estimates.
+\begin{theorem}[Policy gradient theorem]
+    For any differentiable policy $\pi_{\theta}(s,a)$, let $p_0$ be the starting distribution 
+    over the states in which we begin an episode. Then, the policy gradient of 
+    ${\mathbf{J(\theta)}= \mathbb{E}_{\pi_{\theta}}[G_0|s_0 \sim p_0]}$ is
+    \begin{align*}
+        \mathbf{\nabla_{\theta} J (\theta)} = \mathbb{E}_{\pi_{\theta}}
+        \left[\sum_{t=0}^{T} 
+        \nabla\log{\pi_{\theta}(a_t|s_t)} \gamma^t Q^{\pi_{\theta}}(s_t,a_t) \giventhat s_0 \sim p_0\right]
+    \end{align*}
+\end{theorem}
+The proof will no be shown here but can be looked up \href{https://youtu.be/y3oqOjHilio?si=XjzPBM-osI8y3C6_&t=3029}{here}
+
+\subsection{Advantage Estimation}
+We have seen that we can express the policy gradients through the Q-value. Additionally, we know that we
+can subtract any baseline, as long as it does not depend on the actions, such as the value function $V^\pi$.
+Naturally, this leads to the conclusion that we can also express the policy gradient using the advantage function.
+$$ \underset{a\sim\pi_\theta}{\mathbb{E}}\left[\sum_{k=0}^{T} \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k) 
+   \left(Q^\pi(s_k,a_k) - V^\pi(s_k)\right)}\right] = 
+    \underset{a\sim\pi_\theta}{\mathbb{E}}\left[\sum_{k=0}^{T} \nabla_{\theta}\log{\pi_{\theta} (a_k|s_k)} A^\pi(s_k,a_k) \right]$$
+The question now is, which function should we fit/learn in order to calculate $A^\pi$? The simplest option would be to 
+learn/fit the value function $V^\pi$, since it only depends on the states as inputs, unlike the Q-function or advantage
+function, which also depend on actions. From equation \eqref{eq:q_to_v}, we know that the Q-value can be expressed through 
+the value function. However, since calculating the full expectation would be cumbersome, we approximate it instead:
+\begin{gather*}
+    Q^\pi(s_k,a_k) = r(s_k,a_k)+ \mathbb{E}_{s_{k+1}\sim p(s_{k+1}|s_k,a_k)}[V^\pi(s_{k+1})] \approx r(s_k,a_k)+V^\pi(s_{k+1})\\
+    A^\pi(s_k.a_k) \approx r(s_k,a_k)+V^\pi(s_{k+1}) - V^\pi(s_{k}) \numberthis \label{eq:adv_1_step}
+\end{gather*}
+\subsubsection{Generalized Advantage Estimation}
+With equation \eqref{eq:adv_1_step}, we achieve lower variance but introduce higher bias, as our 
+function approximation of the value function could be incorrect. In contrast, equation \eqref{polygrad_td}
+has no bias but suffers from high variance. As we saw with n-step returns in Section \ref{multi_steps}, 
+we can balance variance and bias by rolling out the estimates, resulting in:
+$$Q_n^\pi(s_k,a_k)= \sum_{t=k}^{k+n} \gamma^{t-k}r(s_t,a_t)+ \gamma^n V^\pi(s_{k+n})$$
+Generalized Advantage Estimation (GAE) takes this a step further by considering all possible n-steps
+and calculating an exponentially-weighted average of n-step returns with decay parameter $\lambda$:
+$$Q^\pi(s_k,a_k;\lambda) = (1-\lambda) \sum_{n=1}^\infty \lambda^{n-1}Q_n^\pi(s_k,a_k) \qquad \text{with }(1-\lambda) \sum_{n=1}^\infty \lambda^n = 1$$
+The idea is to assign exponentially smaller weights to future time steps, as they have more variance.\newline
+This method, which involves function fitting combined with policy gradients, is known as actor-critic methods,
+and will be discussed in detail the following sections.
+
+\subsection{Self-Test Questions}
+ \begin{enumerate}
+\sq{ What are the advantages/disadvantages of policy search vs value-based methods}\newline Policy gradients are easier to use and tune, more compatible with rich architectures, more versatile ,almost no bias $\rightarrow$ finds good solutions. But in needs much more samples. Value-based Methods are much more sample-efficient (allows off-policy) but No conv. guarantees, often hard to tune, hard to use cont. actions space and Aprox. errors in Q-function can bias the quality of the resulting policy.
+
+\sq{ What is the main idea of policy gradient algorithms?} \newline With
+policy gradients we parametrise the policy $\pi_\theta$ directly, where the goal is to find the optimal parameter $\theta$ in order to maximise the value function.
+
+\sq{ What kind of policies are used in discrete action and continuous action domains?}\newline Softmax policy for discrete and Gaussian policy for continuos.
+
+\sq{ How can we use the log-ratio trick to compute the policy gradient?} $\rightarrow$ \ref{PG}
+
+\sq{ Why can we compute gradients even if the reward or the dynamics are not differentiable?} \newline After using the log-ratio trick we only have to compute the gradient $ \nabla_{\theta} \log{P(\tau;\theta)}$ where $P(\tau;\theta)=p_0(s_0) 
+\prod_{t=0}^{T-1} P(s_{t+1}|s_t,a_t)\;\pi_{\theta}(a_t|s_t)$ and since only our policy is dependent on $\theta$ everything else has zero gradient hence we do not need to have a dynamics model. And the reward is not dependent on $\theta$.
+
+\sq{ Explain the intuition of the REINFORCE update equation}\newline We want to 
+maximise the value function parametrised by $\theta$. To find the maximum, we take 
+the derivative with respect to $\theta$ and take a step in the direction. As this 
+gradient requires an expectation to be calculated, we estimate it using Monte Carlo 
+simulation.
+
+
+\sq{ Why do we need a baseline in policy gradient algorithms?}\newline
+Estimating the gradient via samples leads to high variance. Subtraction the baseline
+from the reward does not add any bias but can chosen such that we reduce the variance.
+
+\sq{ Why is optimizing the advantage beneficial to optimizing the Q-function?}\newline Advantage is given by $A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$
+It tells us how much action $a$ is better then the expected value of the policy 
+$\pi$ in state $s$. The advantage function helps the agent focus on which actions lead to the most improvement over the average. This relative comparison helps in complex environments where absolute values can be hard to estimate.
+%Optimizing the advantage is beneficial over optimizing the Q function directly because it focuses on how much a singular action is better then just being in state s (with all possible states). Optimizing the Q-Function directly (actor-critic) has a potential high bias.
+
+\sq{ How can we exploit temporal structure for policy gradients?} \newline We can ignore rewards before time step $t$ for  the action $a_t$ since they do not determine how good that action was
+
+\end{enumerate}
+
+\subsection{Resources}
+Much of the content here is based on Sergey Levine’s CS 285: Lecture 5 \cite{CS285,CS285LevineYoutube} ans also on the blog post ''Part 3: Intro to Policy Optimization`` from OpenAI Spinning Up \cite{OpenAI_Spinning_UP}.

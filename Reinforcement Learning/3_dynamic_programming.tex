@@ -1,0 +1,126 @@
+\section{Optimal decision making via dynamic programming}\label{dynammic programming}
+We begin with the simplest scenario, where the agent has full knowledge of the environment, 
+including the state transition probabilities and the reward function. A straightforward approach 
+to computing the value function for a given policy $\pi$ is the Policy-Evaluation algorithm. 
+This method iteratively employs the Bellman equation \eqref{v bellmann} to update and refine the value function.
+\begin{algorithm}[H]
+   \large
+    \caption{Policy Evaluation}\label{policy evaluation}
+    \begin{algorithmic}
+        \STATE  $V_0^{\pi}(s) \gets 0 $
+        \FOR{k = 1 until convergence}
+            \FOR{all s in S}
+                \STATE $ V_k^{\pi}(s) \gets  \sum_a \pi(a|s)\left(R(s,a)+\gamma \sum_{s'} p(s'|s,a)V_{k-1}^{\pi}(s')\right) $
+            \ENDFOR
+        \ENDFOR
+    \end{algorithmic}
+\end{algorithm}
+Now we know how to evaluate a policy, but we are interested in finding 
+the optimal policy. One naive way is to try every possible policy to find the 
+optimal one. But already the number of deterministic policies is $|A|^{|S|}$ 
+(because we have in each state $|A|$ possible actions we could take), which is 
+intractable. So we use a more efficient algorithm called Policy-Iteration
+\eqref{policy iteration}. The idea is to start with a random policy and 
+improve it iteratively. 
+
+\hspace{-0.7cm}
+\begin{minipage}[t]{0.45\textwidth}
+\begin{algorithm}[H]
+   \large
+    \caption{Policy Iteration}\label{policy iteration}
+    \begin{algorithmic}
+        \STATE  $\pi_0(s) \gets \text{ randomly for all states s} $
+            \WHILE{$\norm{\pi_i-\pi_{i-1}}_1> 0$}
+                \STATE $V^{\pi_i} \gets \textbf{ Policy Evaluation} \text{ of } \pi_i$
+                \STATE $\pi_{i+1} \gets \textbf{Policy Improvement}$
+                \STATE $i+=1$
+            \ENDWHILE
+    \end{algorithmic}
+\end{algorithm}
+\end{minipage}
+%\hfill
+\begin{minipage}[t]{0.55\textwidth}
+\begin{algorithm}[H]
+  \large
+    \caption{Policy Improvement}\label{policy improvement}
+    \begin{algorithmic}
+        \FOR{s in S and a in A}
+        \STATE $Q^{\pi_i}(s,a) \ \gets R(s,a) \ + \gamma \sum_{s'}p(s'|s,a) V^{\pi_i}(s')$
+        \ENDFOR
+        \FOR{s in S}
+        \STATE $\pi_{i+1}(s) = \argmax_{a} Q^{\pi_i}(s,a)$
+        \ENDFOR
+    \end{algorithmic}
+\end{algorithm}
+\vspace{0.3cm}
+\end{minipage}
+It can be shown that this procedure leads to the optimal policy due to its monotonic 
+improvement of the policy in every iteration, meaning that $V^{\pi_i}(s) \leq V^{\pi_{i+1}}(s)$.\newline
+Another way to find the optimal policy in this setting  is to use the Value-Iteration algorithm 
+(\ref{value iteration}). It can also be demonstrated that value iteration converges to an optimal solution. 
+\begin{algorithm}[H]
+  \large
+    \caption{Value Iteration}\label{value iteration}
+    \begin{algorithmic}
+        \STATE $V_0^{\pi}(s)\gets 0 (\forall s)$
+        \WHILE{not converged (for ex. $\norm{V_{k+1}-V_k}> \epsilon $)}
+            \FOR{ s in S}
+        \STATE $V_{k+1}(s)=\max\limits_{a}\left[R(s,a)+\gamma \sum_{s'}p(s'|s,a)V_k(s')\right]$ \COMMENT{this is equation \eqref{eq:q_to_v}}
+        \STATE $\pi_{k+1}(s)=arg \max\limits_{a}\left[R(s,a)+\gamma \sum_{s'}p(s'|s,a)V_k(s')\right]$
+            \ENDFOR
+        \ENDWHILE
+    \end{algorithmic}
+\end{algorithm}
+The problem with the Policy- and the Value-Iteration algorithm is that they require 
+full knowledge of the environment, i.e. dynamics model and reward function. This is often 
+not available, so we will now look at methods that allow us to find a optimal policy even 
+if we do not have a model of the environment.
+\subsection{Self-Test Questions}
+\begin{enumerate}
+    \sq{The definition of a MDP} $\rightarrow$ \ref{MDP}
+    \sq{Why do we need discounting ?} \newline If we would no discount then our 
+    return ( discounted future rewards) would be infinite which results in every policy 
+    being an optimal policy and making it hard to come up with algorithms to find the 
+    optimal policy in these cases. Another thing is that we can control the behaviour of 
+    the agent by choosing the the discount factor. If $\gamma \rightarrow  0$ (myopic) 
+    then focused on maximizing immediate reward. If $\gamma \rightarrow  1$ (farsighted)
+    focused on future rewards.
+    
+    \sq{The definition of the optimal and the policy based V- and Q-Functions}
+    \begin{gather*}
+        V^{\pi}(s) = \mathbb{E}[G_t | s_t =s],\;V^*(s)= \max\limits_\pi V^{\pi}(s) \\
+        Q^{\pi}(s,a) = \mathbb{E}[G_t | s_t =s,a_t = a],\;Q^*(s,a)= \max\limits_\pi Q^{\pi}(s,a)
+    \end{gather*}
+    
+    \sq{What is the bellman principle of optimality ?}\newline 
+   An optimal policy has the property that whatever the initial state and initial 
+   decision are, the remaining decisions must constitute an optimal policy with regard 
+   to the state resulting from the first decision.
+   \begin{gather*}
+       V^* (s) = \max\limits_a \left(R(s,a)+\gamma \sum_{s'} p(s'|s,a)V^{*}(s')\right) \\
+       Q^*(s,a) = R(s,a) + \gamma \sum_{s'}p(s'|s,a)\max\limits_a Q^{*}(s',a')
+   \end{gather*}
+    
+    \sq{How the value iteration algorithm works} $\rightarrow$ \ref{value iteration}
+    
+    \sq{How the policy iteration algorithm works} $\rightarrow$ \ref{policy iteration}
+
+    \sq{If in a policy iteration step the policy doesn’t change, can it ever change again? (not from the lecture)}\newline
+     No (if $\pi^{*}$ is unique $\forall s$). Because if $\pi_{i}=\pi_{i+1}$ then $ Q^{\pi_i} =  Q^{\pi_{i+1}}$ 
+     and this results in the policy never changing again.
+
+     \sq{Is there a maximum number of iterations of policy iteration? (not from the lecture)}\newline
+      $|A|^{|S|}$ since that is the maximum number of policies, and as the policy improvement step is monotonically improving, each policy can only appear in one round of policy iteration unless it is an optimal policy.
+    
+    \sq{What are the conceptual differences between value- and policy-
+    iteration? } \newline In policy iteration we first do multiple passes that update 
+    the value function and then update the policy with these newly computed values. In 
+    value iteration when updating the value function we simultaneously/implicitly also 
+    update the policy. Value iteration can be seen as an extreme case of policy 
+    iteration where we stop the evaluation after one update.  
+    
+    \sq{What are the limitations of these approaches ?}\newline
+    We must know the dynamics and reward model and it only works for discrete settings or 
+    Linear Systems, Quadratic Reward, Gaussian Noise (LQR)
+\end{enumerate}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,106 @@
+\section{Bayesian Optimization}
+This section provides a simplified understanding of Bayesian Optimization (BayesOpt) and is not intended to be a detailed 
+treatment of the topic. A comprehensive explanation would require additional concepts and methods that are beyond the scope of 
+this discussion.\newline 
+BayesOpt is another method designed for black-box, derivative-free global 
+optimization. This means it is tailored for optimization problems where the objective 
+function is unknown, complex, or cannot be directly analyzed (black-box), and or where 
+derivatives are unavailable or difficult to compute (derivative-free).\newline 
+Rather than directly optimizing the objective function, BayesOpt relies on a probabilistic surrogate model, typically a 
+Gaussian Process (GP) to approximate the function's behavior. This surrogate model helps guide the search for the optimal 
+solution. BayesOpt is particularly focused on global optimization, meaning it seeks the best solution across the entire search 
+space rather than just local optima.\newline 
+Through an acquisition function, BayesOpt strikes a balance between exploration (sampling areas with high uncertainty) and exploitation (focusing on areas that are already promising), making it an efficient approach when function evaluations are expensive or time-consuming. But it is limited by the number of dimensions (mostly $\leq$ 20) since it is 
+very computational expensive. 
+
+%Before going more in detail we will look at Bayes-theorem:
+%$$\underbrace{p(\theta|D)}_\text{posterior} = \frac{\overbrace{p(D|\theta)}^\text{data likelihood}\overbrace{p(\theta)}^\text{prior}}{\underbrace{p(D)}_\text{evidence}}$$
+%\begin{itemize}
+%    \item prior: encodes our subjective belief 
+%    \item posterior: Probability of parameter vector given the data
+%    \item likelihood : Specified by our parametric model $D$
+%    \item evidence: Normalization, can be used for model comparison
+%\end{itemize}
+
+\subsection{Surrogate Model (Gaussian Process Regression)}
+In Bayesian optimization, the surrogate model is typically constructed using Gaussian Process (GP) regression, a Bayesian 
+statistical approach. A GP model treats function values as random variables, assuming a prior distribution that is 
+multivariate normal, characterized by a mean vector and a covariance matrix. The mean vector is computed by evaluating a mean 
+function $\mu_\theta$ at each sampled input point $x_i$, while the covariance matrix $\Sigma_\theta$ is determined using a 
+kernel function. This kernel encodes our belief that input points closer together in the input space are likely to have 
+similar function values. The kernel is crucial as it dictates the correlation between points in the function's input space.
+
+\subsection{Acquisition Function}
+The acquisition function is central to guiding the optimization process. It decides where to evaluate next by balancing 
+exploration (sampling in areas of high uncertainty) and exploitation (focusing on areas where the model predicts good 
+outcomes). Popular acquisition functions include Upper Confidence Bound (UCB), Knowledge Gradient, Entropy Search, and 
+Predictive Entropy Search, among others.\newline 
+For instance, the UCB (Upper Confidence Bound see \ref{UCB}) acquisition function is a widely used strategy. 
+It combines the predicted mean $\mu(x)$ from the Gaussian Process with the uncertainty $\sigma(x)$ at each point. The UCB 
+function is defined as:
+$$\text{UCB}(x) = \mu(x) + \sqrt{\beta} \cdot \sigma(x)$$
+The goal is to maximize the UCB function to find the next point that either has high predicted values (exploitation) or high 
+uncertainty (exploration). To identify the next point $x_\text{next}$ for evaluation, the acquisition function is optimized 
+over the input space:
+$$x_{\text{next}} = \arg \max_x \text{UCB}(x)$$
+
+\subsection{Optimization Loop}
+The optimization process proceeds iteratively. In each iteration:
+\begin{itemize}
+\item A new input point is selected based on the acquisition function.
+\item The objective function is evaluated at that point.
+\item The surrogate model (e.g., Gaussian Process) is updated with the new data.
+\end{itemize}
+The loop continues until a predefined stopping criterion is met, such as reaching a maximum number of iterations, 
+exceeding a time limit, or observing negligible improvement in the objective function.
+
+\subsection{Self-Test Questions}
+\begin{enumerate}
+
+\sq{Why we do we use a Bayesian treatment for learning the fitness function?}\newline
+Bayesian methods allow for efficient optimization of expensive, noisy, or unknown functions 
+by using a probabilistic model (e.g., Gaussian Process) to capture uncertainty and guide the 
+search for optimal points without needing derivative information.
+
+\sq{What a GP is and how to obtain the GP posterior}\newline
+A Gaussian Process (GP) is a probabilistic model that defines a distribution over functions. 
+The posterior is obtained by updating the prior distribution with observed data using Bayes' 
+rule, resulting in a model that reflects the updated beliefs about the function.
+
+\sq{How to use acquisition functions in BO?}\newline
+Acquisition functions guide where to sample next. They balance exploration (uncertain 
+regions) and exploitation (promising regions), commonly using Expected Improvement (EI) or 
+alternatives like Knowledge Gradient (KG).
+
+\sq{Why BO can give you the global maximum instead of just a local one?}\newline
+BO uses a probabilistic model (GP) to model uncertainty and avoid local optima by selecting 
+points that provide the most information, thus increasing the likelihood of finding the 
+global maximum.
+
+\sq{Difference between considering the exploration-exploitation tradeoff and pure 
+exploration phase.}\newline
+Exploration-exploitation balances uncertainty and predicted value, improving efficiency. 
+Pure exploration focuses solely on areas with high uncertainty, which can be useful early in 
+optimization but may not lead to the best result.
+
+\sq{The key ideas of the acquisition functions}\newline
+Acquisition functions guide the optimization by quantifying the tradeoff between 
+exploring uncertain areas and exploiting known good areas to maximize the objective.
+
+\sq{How to deal with hyper-parameters of the GP}\newline
+Hyperparameters (e.g., length scale) are learned through maximum likelihood estimation or 
+Bayesian inference to best fit the GP model to the observed data.
+
+\sq{What are the pros and cons of BO in comparison to Stochastic Search?}
+\begin{itemize}
+\item Pros of BO: Efficient with fewer evaluations, good for expensive functions, global 
+optimization.
+\item Cons of BO: Computationally intensive for high dimensions.
+\item Stochastic Search pros: Simple and scalable for high dimensions, no model required.
+\item Cons of Stochastic Search: Less efficient for expensive functions, risk of local optima.
+\end{itemize}
+\end{enumerate}
+
+
+
+

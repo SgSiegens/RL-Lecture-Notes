@@ -1,0 +1,46 @@
+\section{Motion Primitives}
+Motion Primitives (MPs) are a way to represent and control robot movements in reinforcement 
+learning (RL). MPs are like pre-designed building blocks for smooth, efficient robot 
+trajectories (paths or motions). Imagine you’re teaching a robot to move its arm smoothly 
+from point A to point B. Instead of telling it every tiny step ("move 1cm, then 2cm, then 
+turn..."), you give it a single, smooth "recipe" for the whole motion. Desired trajectory 
+$\tau$ is generated using parameters $\omega$  of the MP and initial conditions of the agent 
+(joint position $y_0$  and velocity  $\dot{y}_0$). 
+
+\subsection{Dynamic Motion Primitives (DMPs)}
+One can think of DMPs as a system with a "moving target" (called an attractor). The robot’s 
+motion is guided by a simple equation that pulls it toward a goal while adding a 
+customizable "force" to shape the path.
+$$\ddot{y} = \alpha(\beta(\underbrace{g+\frac{f_\omega(t)}{\alpha\beta}}_{\text{Moving Attractor}}-y)-\dot{y})$$
+The forcing function $f_\omega(t)$ (learnable) encodes the desired additional acceleration profile.  
+\begin{itemize}
+    \item Pros: \begin{itemize}
+        \item Smooth trajectories (no jerkiness).
+        \item Stable by design (won’t go wild).
+        \item Easy to tweak speed or end position.
+    \end{itemize}
+    \item Cons: Hard to capture complex variations in motion.
+\end{itemize}
+
+\subsection{Probabilistic Motion Primitives (ProMPs)}
+ProMPs use a set of basic shapes (basis functions) to draw the trajectory directly, plus a 
+probability model to account for uncertainty or variation (e.g., "this motion might vary a 
+bit").
+\begin{itemize}
+    \item Pros:\begin{itemize}
+        \item Can adapt to specific points (e.g., "pass through here at time X").
+        \item Models variations well (useful for human-robot teamwork).
+    \end{itemize}
+    \item Cons: Replanning mid-motion can cause jumps (not smooth).
+\end{itemize}
+
+\subsection{Probabilistic Dynamic Motion Primitives (ProDMPs)}
+ProDMPs blend DMPs and ProMPs. They solve the DMP equations to keep smoothness and add 
+ProMP’s probabilistic flexibility.
+\begin{itemize}
+    \item Pros: \begin{itemize}
+        \item Smooth even when replanning.
+        \item Handles variations and adapts to new conditions.
+    \end{itemize}
+    \item Cons: A bit more complex to set up.
+\end{itemize}
