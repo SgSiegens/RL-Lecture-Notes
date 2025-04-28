@@ -1,1 +1,4 @@
 # RL-Lecture-Notes
+This repository contains unofficial lecture notes for the course Reinforcement Learning [M-INFO-105623] at the Karlsruhe Institute of Technology (KIT). I created these notes to deepen my own understanding of the material. 
+Please note that the structure and content reflect my personal learning process and what made the most sense to me. I occasionally used language models to help improve phrasing, as English is not my first language.
+If you notice anything unclear or incorrect, feel free to open an issue or submit a pull request. Contributions and feedback are always welcome!
