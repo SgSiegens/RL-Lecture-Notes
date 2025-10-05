@@ -64,6 +64,20 @@
   }\ignorespaces%
 }
 
+% Define custom colors
+\definecolor{darkred}{RGB}{139,0,0}
+\definecolor{citeblue}{RGB}{0,0,180}
+
+% Setup hyperref with colored boxes
+\hypersetup{
+    colorlinks=true,         % false = boxed links; true = colored text
+    linkcolor=darkred,       % color for cross-references (equations, figures, sections)
+    citecolor=citeblue,      % color for citations
+    urlcolor=blue,           % color for URLs
+    linkbordercolor=darkred, % if you want boxes instead of colored text, set color here
+    pdfborderstyle={/S/U/W 1} % optional: underline style for links
+}
+
 % Custom colors
 \colorlet{mypink}{red!40}
 \colorlet{myblue}{cyan!60}
