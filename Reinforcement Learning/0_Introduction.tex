@@ -19,8 +19,9 @@ likely to repeat or refrain from that behaviour in the future.
 The main characters are the agent and the environment. At every step, the agent receives a reward and either the 
 full state or just an observation of the environment. A state is a complete description of the world, like the 
 configuration of a chess game. An observation, though, is a partial description. Imagine an agent in a video 
-game: if you don’t have access to the underlying game mechanics, you can only infer information about the world 
-through the current frame. The reward indicates how good or bad the agent’s last action was, providing feedback 
+game where the state is defined by underlying game mechanics. Since most of the time you don't actually have access to 
+these things you might only infer information about the world through the current frame (this is the observation).\newline 
+The reward indicates how good or bad the agent’s last action was, providing feedback 
 about what happened and how the environment might have changed (sometimes the environment changes on its own). 
 Based on this, the agent selects its next action, aiming to accumulate as much reward as possible over time, 
 known as the return.
