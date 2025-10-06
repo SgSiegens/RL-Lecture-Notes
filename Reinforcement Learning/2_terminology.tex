@@ -77,8 +77,8 @@ As previously noted, the agent's objective is to find a policy that maximizes th
 agent seeks to optimize either the value function or the state-action value function, which then serves as a 
 foundation for deriving the policy. The optimal policy is defined as follows
 \begin{gather*}
-V^{*}(s) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s\right]\\ %= \max_{a} \left( R(s,a) + \gamma \sum_{s'} p(s'|s,a) V^{}(s') \right), \\
-Q^*(s,a) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s, a_t = a\right] %= R(s,a) + \gamma \sum_{s'} p(s'|s,a) \max_{a'} Q^{}(s',a').
+V^{*}(s) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s\right]\\
+Q^*(s,a) = \max_{\pi} \mathbb{E}_{\pi}\left[G_t | s_t = s, a_t = a\right].
 \end{gather*}
 Given the relationship between the value function and the state-action value function, it follows that $V^{*}(s) = 
 \max\limits_{a}Q^{*}(s,a)$. With $Q^*$ determined, the optimal policy can be straightforwardly expressed as $\pi^*
@@ -108,8 +108,8 @@ Similarly, the action-value function $ Q^\pi(s,a)$ can be expressed recursively
 The $V$-Bellmann \eqref{v bellmann} and $Q$-Bellman \eqref{q bellmann} equations can be decomposed further by exapnding the expectations
 \begin{gather}
      V^{\pi}(s) = \sum_a \pi(a \mid s) \left(R(s,a) + \gamma \sum_{s'} p(s' \mid s,a) V^{\pi}(s') \right) \label{expanded_v_bell},\\
-      Q^{\pi}(s,a) = R(s,a) + \gamma \sum_{s'} p(s' \mid s,a) \sum_{a'} \pi(a' \mid s') Q^{\pi}(s',a') \label{expanded_q_bell}.
-\end{gather}
+      Q^{\pi}(s,a) = R(s,a) + \gamma \sum_{s'} p(s' \mid s,a) \sum_{a'} \pi(a' \mid s') Q^{\pi}(s',a')  \label{expanded_q_bell}.\footnotemark
+\end{gather}\footnotetext{Since $ \sum_{a'} \pi(a' \mid s') Q^{\pi}(s',a') = \mathbb{E}_{a'\sim \pi}[Q^{\pi}(s',a')] = V^{\pi}(s') \rightarrow Q^{\pi}(s,a) =  R(s,a) + \gamma \sum_{s'} p(s' \mid s,a)  V(s') $}
 \subsubsection{Bellman Optimality Equations}
 the ooptimal value fucntiosn can also be expressed in term sof the bellmann equation
 \begin{align*}

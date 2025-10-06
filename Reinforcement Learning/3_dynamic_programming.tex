@@ -2,7 +2,7 @@
 We begin with the simplest scenario, where the agent has full knowledge of the environment, 
 including the state transition probabilities and the reward function. A straightforward approach 
 to computing the value function for a given policy $\pi$ is the Policy-Evaluation algorithm. 
-This method iteratively employs the Bellman equation \eqref{v bellmann} to update and refine the value function.
+This method iteratively employs the Bellman equation \eqref{expanded_v_bell} to update and refine the value function.
 \begin{algorithm}[H]
    \large
     \caption{Policy Evaluation}\label{policy evaluation}
@@ -65,7 +65,7 @@ Another way to find the optimal policy in this setting  is to use the Value-Iter
         \STATE $V_0^{\pi}(s)\gets 0 (\forall s)$
         \WHILE{not converged (for ex. $\norm{V_{k+1}-V_k}> \epsilon $)}
             \FOR{ s in S}
-        \STATE $V_{k+1}(s)=\max\limits_{a}\left[R(s,a)+\gamma \sum_{s'}p(s'|s,a)V_k(s')\right]$ \COMMENT{this is equation \eqref{eq:q_to_v}}
+        \STATE $V_{k+1}(s)=\max\limits_{a}\left[R(s,a)+\gamma \sum_{s'}p(s'|s,a)V_k(s')\right]$
         \STATE $\pi_{k+1}(s)=arg \max\limits_{a}\left[R(s,a)+\gamma \sum_{s'}p(s'|s,a)V_k(s')\right]$
             \ENDFOR
         \ENDWHILE
