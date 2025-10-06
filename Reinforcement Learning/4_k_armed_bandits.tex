@@ -52,7 +52,13 @@ action as it does the next best action. In tasks where the worst actions are ver
 can be unsatisfactory. The obvious solution is to vary the action probabilities as a  
 graded function of the estimated value (exploitation). But at the same time, we are 
 uncertain about the rewards and therefore need to keep uncertainty in the policy, for which 
-entropy is a good measure (exploration). Thus the objective looks like this 
+entropy $H$ is a good measure (exploration). Entropy is a concept from information theory 
+that measures the randomness or uncertainty of a probability distribution, which, in our case, is the stochastic policy $\pi(a|s)$.
+A policy with High Entropy means the action probabilities are nearly equal for all actions. This signifies high uncertainty on the 
+agent's part, as its action choices are very random. This state promotes greater exploration because the agent is not strongly 
+committed to any single action.\newline Conversely, a policy with Low Entropy means the agent assigns a high probability to one or a few actions 
+(approaching a deterministic policy). This signifies high confidence in those actions, as the agent's choices are predictable. This state promotes 
+greater exploitation as the agent focuses on the action it believes to be optimal. The new the objective which includes this idea of entropy looks like this 
 \begin{align*}
     \pi^*_t = \argmax\limits_\pi \sum_a \pi(a) q_t(a) + \tau^{-1}H(\pi) &=\argmax\limits_\pi \sum_a \pi(a) q_t(a) + \tau^{-1} (- \sum_a \pi(a)\log{\pi(a)})\\   &=\argmax\limits_\pi \sum_a \pi(a)(q_t(a)-\tau^{-1}\log{\pi(a)})
 \end{align*}
@@ -68,7 +74,7 @@ The UCB formula is defined as $$ a_t = \argmax\limits_a
 {N_t(a)}}}_{\text{exploration}}$$
 $c$ is a constant that allows us to set the exploration/exploitation trade-off. 
 $\sqrt{1/{N_t(a)}}$ essentially says that the more times you pull an arm, there is less unknown about that arm. 
-So the fewer times action a is chosen, the higher the exploration bonus.
+So the fewer times action $a$ is chosen, the higher the exploration bonus.
 $\sqrt{\log{t}}$ ensures that you don't stop exploring too early. \newline 
 In the following, we will examine how different strategies perform across various parameter settings. 
 To do this, we utilize a 10-armed bandit experiment, averaging the results over 2000 runs with sample 
