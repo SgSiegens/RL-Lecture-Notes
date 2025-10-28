@@ -124,7 +124,7 @@ enabling policy improvement without dependence on the dynamics model.
 %beneficial or not. This trade off of exploration vs exploitation has been already 
 %addressed in k-armed-bandit chapter. With the following algorithms we will see how 
 %this idea also plays a role.  
-\begin{figure}[H]
+\begin{figure}
     \centering
      \includegraphics[width=\linewidth]{images/TD_MC_DP_backups.png}
     \caption{Visualization of Monte Carlo methods (left), Temporal Difference (TD) learning (middle), and Dynamic Programming (right) in a backup diagram.
@@ -296,7 +296,7 @@ The red highlights indicate how each method computes value functions: Monte Carl
   %$$\omega' = \tau \omega'+(1-\tau)\omega$$
 
   \begin{algorithm}[H]
-    \large
+   % \large
     \caption{Deep-Q-Learning (DQN) with Replay-Buffer and Target Networks \cite{mnih2013playingatarideepreinforcement}}\label{dqn}
     \begin{algorithmic}
       \STATE \textbf{Input} C,$\alpha,\tau$
@@ -346,6 +346,22 @@ The red highlights indicate how each method computes value functions: Monte Carl
     \caption{Value estimates by DQN (orange) and Double DQN (blue) on some Atari games, from \cite{vanhasselt2015deepreinforcementlearningdouble}}
     \label{fig:ddqn}
   \end{figure}
+
+ 
+  \subsubsection{Dueling DQN}
+
+  Recall that the advantage function is defined as $A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s)$. The key idea behind the
+  \textit{Dueling DQN} architecture \cite{wang2016duelingnetworkarchitecturesdeep} is to separately estimate two components: the \textbf{state-value function}
+  \(V(s)\) and the \textbf{advantage function} \(A(s, a)\). These two outputs are then combined to compute the 
+  action-value function \(Q(s, a)\). This decoupling allows the network to independently learn the value of a
+  given state and the relative advantages of actions within that state. An important detail is that when computing 
+  the advantages, we ensure they have zero mean across all actions in order to be complient with the definition of the 
+  advantge function:
+  \[
+    A(s, a) \leftarrow A(s, a) - \frac{1}{|\mathcal{A}|} \sum_{a'} A(s, a')
+  \]
+ Overall, the Dueling DQN architecture leads to more stable and faster convergence, particularly in environments where 
+ many actions have similar Q-values.
 
   \subsubsection{Multi-Step Returns} \label{multi_steps}
   In the versions of Q-Learning /DQN we've been looking at, a 1-step look-ahead is employed to compute the targets 
