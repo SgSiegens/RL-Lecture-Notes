@@ -124,7 +124,7 @@ enabling policy improvement without dependence on the dynamics model.
 %beneficial or not. This trade off of exploration vs exploitation has been already 
 %addressed in k-armed-bandit chapter. With the following algorithms we will see how 
 %this idea also plays a role.  
-\begin{figure}
+\begin{figure}[H]
     \centering
      \includegraphics[width=\linewidth]{images/TD_MC_DP_backups.png}
     \caption{Visualization of Monte Carlo methods (left), Temporal Difference (TD) learning (middle), and Dynamic Programming (right) in a backup diagram.
@@ -200,6 +200,72 @@ The red highlights indicate how each method computes value functions: Monte Carl
     \item $\sum_{n=1}^{\infty} \alpha_n(s,a) = \infty \;\forall (s,a)$
     \item $\sum_{n=1}^{\infty} (\alpha_n(s,a))^2 < \infty \;\forall (s,a)$
   \end{itemize}
+
+  \subsubsection{Multi-Step Returns}
+  We have thus far considered two extremes for policy evaluation. On one hand, Monte Carlo methods use the full,
+  unbiased episodic return ($G_t$), but they suffer from high variance because the estimate depends on the entire
+  sequence of stochastic transitions and rewards until the episode's end. On the other hand, one-step Temporal-
+  Difference learning (TD(0)) uses a low-variance estimate by bootstrapping after a single step 
+  ($R_{t+1} + \gamma V(S_{t+1})$), but this introduces significant bias from its reliance on the current (and
+  likely imperfect) value estimate.\newline To find a middle ground and control this bias-variance trade-off,
+  we can use \textit{n-step returns}. The core idea is to look $n$ steps into the future, accumulating actual rewards,
+  and only then bootstrap using the value estimate of the resulting state. The \textbf{$n$-step return} at time $t$, 
+  denoted $G_t^{(n)}$, is formally defined as:
+  $$
+  G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \dots + \gamma^{n-1} R_{t+n} + \gamma^n V(S_{t+n})
+  $$
+  where $V(S_{t+n})$ is the current estimate of the value of state $S_{t+n}$. If the episode terminates before 
+  $t+n$, the return is simply the full Monte Carlo return $G_t$, and $V(S_{\text{terminal}}) \equiv 0$. The 
+  corresponding $n$-step TD update for the state-value function $V(S_t)$ is then:
+  $$
+  V(S_t) \leftarrow V(S_t) + \alpha \left[ G_t^{(n)} - V(S_t) \right]
+  $$
+  This formulation elegantly unifies MC and TD(0). Note that for $n=1$, we recover the TD(0) update, as 
+  $G_t^{(1)} = R_{t+1} + \gamma V(S_{t+1})$. As $n \to \infty$ (or $n$ exceeds the episode length), $G_t^{(n)}$ 
+  becomes the standard Monte Carlo return $G_t$. The parameter $n$ is now a hyperparameter. Rather than selecting
+  a single "best" $n$, we can combine all possible $n$-step returns. This leads to the \textbf{$\lambda$-return},
+  $G_t^\lambda$, which creates a compound return by averaging all $n$-step returns, weighting each by 
+  $(1-\lambda)\lambda^{n-1}$. This is the foundation of the TD($\lambda$) algorithm.
+  \paragraph{Eligibility traces}
+  However, a practical problem persists, which we first encountered with Monte Carlo methods. To compute the 
+  $n$-step return $G_t^{(n)}$ (or the full $\lambda$-return), we must wait until time $t+n$ (or the end of the 
+  episode for $G_t^\lambda$) to observe the required rewards and the state $S_{t+n}$. Only then can we compute 
+  the update for $V(S_t)$. This delay is undesirable, as it prevents the algorithm from being fully online. 
+  This "forward-view" perspective motivates the need for an equivalent "backward-view" mechanism, 
+  which is provided by eligibility traces.\newline To solve the problem of update delays, we introduce
+  \textit{eligibility traces}. This "backward-view" mechanism provides a computationally efficient and
+  fully online method that is mathematically equivalent to the "forward-view" $\lambda$-return. The intuition is 
+  as follows: an eligibility trace is a short-term memory that tracks which states have been visited recently.
+  When a "surprise" occurs (i.e., the TD error is high, meaning our prediction was wrong), we assign credit or
+  blame for this surprise not just to the immediately preceding state, but to all recently visited states, 
+  proportional to their eligibility.\newline  Mechanically, we maintain an eligibility trace, $E_t(s)$, for every
+  state $s$. At the beginning of an episode, all traces are zero. At each time step $t$, the trace for the visited
+  state $S_t$ is incremented, and all other traces decay:
+  $$
+  E_t(s) =
+  \begin{cases}
+    \gamma \lambda E_{t-1}(s) + 1 & \text{if } s = S_t \\
+    \gamma \lambda E_{t-1}(s)       & \text{if } s \neq S_t
+  \end{cases}
+  $$
+  This is known as an *accumulating trace*. The parameter $\lambda \in [0, 1]$ controls the rate of decay:
+  \begin{itemize}
+    \item If $\lambda=0$, $E_t(s)$ is 1 only for the current state $s=S_t$ and 0 otherwise. This reduces to the standard one-step TD(0) update.
+    \item If $\lambda=1$, the trace does not decay (within an episode), which relates the algorithm to Monte Carlo methods.
+  \end{itemize}
+
+  With eligibility traces, the update process becomes simple and online. At time $t+1$, we observe the reward $R_{t+1}$ and the next state $S_{t+1}$. We then compute the one-step TD error:
+  $$
+  \delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)
+  $$
+  This single error signal $\delta_t$ is then used to update \textit{all} states in the environment, weighted by their current eligibility trace:
+  $$
+  V(s) \leftarrow V(s) + \alpha \delta_t E_t(s), \quad \text{for all } s \in \mathcal{S}
+  $$
+  This backward-view update, performed at every step, has been proven to be equivalent to the forward-view
+  TD($\lambda$) algorithm. It achieves the same effect as averaging all $n$-step returns, but does so efficiently,
+  without waiting for future time steps.
+  \newline 
   But there is still a problem with the algorithms shown here. They only work when
   we can store all the values in tables. In fact, every algorithm so far only works if 
   we can store the values in tables. For systems with many states and actions, this is 
@@ -296,7 +362,7 @@ The red highlights indicate how each method computes value functions: Monte Carl
   %$$\omega' = \tau \omega'+(1-\tau)\omega$$
 
   \begin{algorithm}[H]
-   % \large
+    % \large
     \caption{Deep-Q-Learning (DQN) with Replay-Buffer and Target Networks \cite{mnih2013playingatarideepreinforcement}}\label{dqn}
     \begin{algorithmic}
       \STATE \textbf{Input} C,$\alpha,\tau$
@@ -347,7 +413,7 @@ The red highlights indicate how each method computes value functions: Monte Carl
     \label{fig:ddqn}
   \end{figure}
 
- 
+
   \subsubsection{Dueling DQN}
 
   Recall that the advantage function is defined as $A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s)$. The key idea behind the
@@ -360,30 +426,8 @@ The red highlights indicate how each method computes value functions: Monte Carl
   \[
     A(s, a) \leftarrow A(s, a) - \frac{1}{|\mathcal{A}|} \sum_{a'} A(s, a')
   \]
- Overall, the Dueling DQN architecture leads to more stable and faster convergence, particularly in environments where 
- many actions have similar Q-values.
-
-  \subsubsection{Multi-Step Returns} \label{multi_steps}
-  In the versions of Q-Learning /DQN we've been looking at, a 1-step look-ahead is employed to compute the targets 
-  $$y = r + \gamma \max\limits_{a'}Q_\omega(s',a')$$
-  This results in low variance but a high bias, suggesting that the Q is likely 
-  wrong. \newline 
-  To address this, we can use n-step returns, which extend the target by rolling out the actual rewards over $n$
-  steps before bootstrapping from the Q-function:
-  $$y_t = r(s_t,a_t)+ \gamma r(s_{t+1},a_{t+1})+ \gamma^2  r(s_{t+2},a_{t+2})+\dots+\gamma^n\max\limits_{a'}Q_\omega(s_{t+n},a')$$
-  Conversely, an n-step look-ahead yields no bias but high variance. Therefore,
-  a trade-off has to be made. But n-step returns are not compatible with off-policy methods such 
-  as Q-learning, as it violates the definition of the Q-function, which is defined as 
-  the expected sum of future rewards if we start in state s and perform action a and 
-  then follow the policy. In the context of a two-step look-ahead, the target is defined as
-  $$y_t = r(s_t,a_t)+ \gamma r(s_{t+1},a_{t+1})+\gamma^2\max\limits_{a'}Q_\omega(s_{t+2},a')$$
-  Note that $s_t$ and $a_t$ may take on any value since their choice does not violate 
-  the definition. But it is necessary for $a_{t+1}$ to align with the policy in order 
-  to ensure that the condition is met. This, however, implies that the choice of 
-  $a_{t+1}$ is not entirely free, and consequently, the look a head is not off-policy. 
-  It is noteworthy that there exist multiple methods to circumvent this issue, which 
-  will not be delved into in this discussion.
-  %Finally, I would encourage you to look at the rainbow paper, which is a gateway to all sorts of dance techniques.
+  Overall, the Dueling DQN architecture leads to more stable and faster convergence, particularly in environments where 
+  many actions have similar Q-values.
 
   \subsection{Self-Test Questions}
   \begin{enumerate}
